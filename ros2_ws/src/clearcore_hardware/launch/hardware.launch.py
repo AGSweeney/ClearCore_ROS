@@ -9,6 +9,7 @@ def generate_launch_description():
     host = LaunchConfiguration("host")
     axis_mask = LaunchConfiguration("axis_mask")
     test_mode = LaunchConfiguration("test_mode")
+    stream_mode = LaunchConfiguration("stream_mode")
     share = FindPackageShare("clearcore_hardware")
     xacro_file = PathJoinSubstitution([share, "urdf", "clearcore.urdf.xacro"])
     controllers = PathJoinSubstitution([share, "config", "controllers.yaml"])
@@ -23,12 +24,15 @@ def generate_launch_description():
             axis_mask,
             " test_mode:=",
             test_mode,
+            " stream_mode:=",
+            stream_mode,
         ])
     }
     return LaunchDescription([
         DeclareLaunchArgument("host", default_value="192.168.0.109"),
         DeclareLaunchArgument("axis_mask", default_value="3"),
         DeclareLaunchArgument("test_mode", default_value="false"),
+        DeclareLaunchArgument("stream_mode", default_value="position"),
         Node(
             package="robot_state_publisher",
             executable="robot_state_publisher",
