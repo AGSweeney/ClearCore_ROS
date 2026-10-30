@@ -30,13 +30,13 @@ Earlier firmware rows keep the image that was on the bench.
 | Cancellation completion | Cancelled execute calls session `stop` and `goal_handle.canceled()` | `ClearCoreBridge._execute` / `test/test_bridge_sim.py` | n/a | 0.1.0 | `automated-sim` | `test_bridge_reconnect_home_recovery_and_cancel` |
 | Cancellation on hardware | Cancel in-flight `follow_joint_trajectory` stops motion and does not report success | `clearcore_bridge` action | 0.1.0+ | 0.1.0 | `not-tested` | No recorded cancel-during-move on the bench |
 | Connection loss | Stream EOF is `ConnectionError`, not an empty update | `StreamClient.read` / `test_safety.py` | n/a | 0.1.0 | `automated-sim` | `test_stream_eof_is_disconnect` |
-| Connection loss on hardware | Dropped TCP 9201 mid-move stops immediately | binary stream | 0.1.3 | 0.1.0 | `not-tested` | Documented in PROTOCOL.md; no captured disconnect log |
+| Connection loss on hardware | Dropped TCP 9201 mid-move stops immediately | binary stream | post-0.1.3 (`08d969c`) | 0.1.0 | `hardware-bench` | 2026-10-30, board `10.168.41.5`: streamed X velocity, closed TCP 9201 mid-move; motion stopped < 20 ms with watchdog latched, 2/2 |
 | Board/host restart | Reconnect repeats `disable` / `clear_alerts` / `configure` / `enable` | `bring_up_session` / `test_session_bringup.py` | n/a | 0.1.0 | `automated-sim` | `test_reconnect_repeats_bring_up`; bridge `_close` then `_ensure_connected` in `test_bridge_sim.py` |
 | Board restart on hardware | Flash keeps NVM; session answers after reboot | `get_status` after flash | 0.1.3 | 0.1.0 | `hardware-bench` | After 0.1.3 flash: `axis_mask` 3, static `172.16.82.114`, motors disabled, `test_mode` false |
 | Homing | SessionClient sends JSON-RPC `home` | `SessionClient.call` / `test_session_bringup.py` | n/a | 0.1.0 | `automated-sim` | `test_home_is_session_call`; bridge `_call("home")` in `test_bridge_sim.py` |
 | Homing on hardware | Seek a limit, optional zero | session `home` | 0.1.3 | 0.1.0 | `not-tested` | API exists; no bench seek recorded in this matrix |
 | Recovery | `recover_watchdog` / Trigger `clear_alerts` send `clear_alerts`; keepalive is a different RPC | `session_bringup.py`, `test_session_bringup.py`, `test_bridge_sim.py` | n/a | 0.1.0 | `automated-sim` | `test_recovery_sends_clear_alerts_not_keepalive`; `_trigger("clear_alerts")` |
-| Recovery on hardware | After a tripped watchdog, `clear_alerts` then `enable` | session | 0.1.3 | 0.1.0 | `not-tested` | No captured watchdog trip |
+| Recovery on hardware | After a tripped watchdog, `clear_alerts` then `enable` | session | post-0.1.3 (`08d969c`) | 0.1.0 | `hardware-bench` | 2026-10-30, board `10.168.41.5`: host silent mid-move tripped the watchdog, commands rejected until `clear_alerts`, then `clear_alerts`+`enable` recovered and parked, 3/3 |
 | Two-axis `follow_joint_trajectory` out and back | Result `error_code` 0 | Python bridge | 0.1.0 | 0.1.0 | `hardware-bench` | releases/README 0.1.0 row; feedback is not the 0.05 mm local tracking residual |
 | `/joint_states` effort empty, `/hlfb_duty` published | Names and stamps match; effort array empty on `/joint_states` | mocked `ClearCoreBridge._publish_state` | n/a | 0.1.0 | `automated-sim` | Review of `4eeab56`; code in `bridge_node.py` |
 
@@ -72,6 +72,27 @@ Earlier firmware rows keep the image that was on the bench.
 | Withhold until TIMESTAMP_REPLY | No `JointState` before reply; then agent-clock stamps | `host/xrce_check.py` | 0.1.2, 0.1.3 | 0.1.0 | `hardware-bench` | 0.1.3: three samples, `effort_len=0` |
 | Empty effort + `hlfb_duty` | Writer 1 rejects filled effort; writer 2 is HLFB | `host/test_xrce_payloads.py` | n/a | 0.1.0 | `automated-sim` | `test_filled_effort_joint_states_rejected` |
 | Move while agent publishes | 0 → 0.030 m → 0 on `/joint_states` | micro-ROS agent | 0.1.0 | 0.1.0 | `hardware-bench` | releases/README 0.1.0; effort then still HLFB/100 |
+
+## Known transient: MotorFaulted after an abrupt stop
+
+On the bench (2026-10-30) the ClearCore occasionally latches `MotorFaulted`
+(alert register bit 5) on both commanded axes at once, surfacing in
+`get_status` as `alerts: in_alert,motor_faulted` with the motors enabled. It is
+rare and not reproducible on demand: seen twice across 100+ enable cycles, four
+15-second idle-enabled holds, and dozens of stop/estop/watchdog trials; it did
+**not** appear in 80 clean enable/disable cycles, nor in 5/5 watchdog-trip or
+5/5 estop-recover trials run to catch it.
+
+It tracks abrupt-stop and re-enable sequences (watchdog trip mid-move, or
+re-enable shortly after an estop), where the motor's HLFB briefly reads
+deasserted while the drive is enabled and the ClearCore faithfully latches the
+fault. The AlertRegMotor bit decode was confirmed against the ClearCore library
+(`MotorDriver.h`); it is a motor/drive HLFB settling transient, not a firmware
+logic error. `clear_alerts` then `enable` recovered every time; the
+`ros2_control` plugin and the Python bridge both issue `clear_alerts` before
+`enable` on reconnect/activate, so they recover automatically. Possible
+firmware hardening (not yet applied): after `enable`, confirm HLFB stays
+asserted for a few ms before reporting enabled.
 
 ## How CI reports
 
