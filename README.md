@@ -55,6 +55,8 @@ Zero is the pose at boot, or the pose after `home` with `zero` true. `0.01` m is
 | `host/ccros_cli.py` | Bench client. No ROS install. |
 | `host/test_wire.py`, `host/test_safety.py` | Codec and bridge checks. No board. |
 | `host/xrce_check.py` | Accepts the XRCE session and prints `JointState` |
+| `host/clearpath_usb.py` | Reads a ClearPath MC/SD's own alerts, status, and position error over its USB (MSP) port. Read-only; close MSP first. |
+| `host/test_bench_two_axis.py` | Two-axis motion bench on M0/M1 with fault logging. Moves real motors. |
 | `host/test_m0_live.py` | Repeats the first-motor 10 mm move. Pass the board address. It restores `axis_mask` and the soft-limit flags. |
 | `ros2_ws/src/clearcore_bridge` | `/joint_states`, Trigger services, `FollowJointTrajectory` |
 | `ros2_ws/src/clearcore_hardware` | `ros2_control` `SystemInterface` |
@@ -96,6 +98,30 @@ DHCP is the compile-time default. If DHCP fails, the address falls back to `192.
 `configure` and `test-mode` are saved in the same blob and restored on boot. `reset-config` restores the compile defaults and clears the blob. The motors must be disabled for `reset-config` and for changes to `axis_mask`, `steps_per_rev`, `pitch_mm`, `rotary_*`, `direction_*`, `gear_*`, or `offset_*`. A joint name can change while enabled. NVM writes need a supply above the ClearCore undervoltage lockout. Version 3 of the blob stores the joint map. A version 1 or version 2 blob still loads, and the map stays at the defaults until the next save.
 
 The bench board is static at **172.16.82.114**, netmask `255.255.255.0`, gateway `172.16.82.1`.
+
+### Setup menu over USB
+
+You can set up a board you can't reach over Ethernet yet from a serial terminal (PuTTY, Tera Term, or the Arduino or VS Code serial monitor) on the ClearCore's USB port at 115200. Type `menu` and press Enter.
+
+```
+=== ClearCoreROS setup (protocol 1.0) ===
+IP now: 192.168.0.109   Motors: disabled
+  1) Network
+  2) Axes: enable, scaling, joint map, limits
+  3) Motion: velocity and acceleration
+  4) Safety: watchdog, estop, test mode
+  5) Show config (JSON)
+  6) Reset all settings to defaults
+  7) Restart board
+  q) Exit menu
+```
+
+- **Navigation:** enter a number to pick an item, `b` to go back, and `q` to leave the menu.
+- **Prompts:** each prompt shows the current value in brackets. Press Enter on an empty line to keep it.
+- **Saving:** each change is validated and saved to NVM right away, through the same code as `configure`, `configure_network`, and `set_test_mode`. The same rules apply: change mechanics only while the motors are disabled, and the supply must be above the undervoltage lockout.
+- **Network:** network changes take effect after a restart, which is item 7.
+- **Echo:** the board echoes your typing while the menu is open, so turn off local echo in the terminal.
+- **Host tools:** JSON-RPC on USB works as before. A line starting with `{` closes the menu and is handled as a request.
 
 ## Bench
 
