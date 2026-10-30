@@ -2,6 +2,28 @@
 
 Prebuilt firmware for the first-motor guide. You do not need Microchip Studio to flash the current file.
 
+## 0.1.5
+
+| | |
+|--|--|
+| File | `ClearCoreROS-0.1.5.bin` |
+| SHA-256 | `a4cd0722ec4fa35edfb8f1ec145db626c813db56b5f5ab9b1c5833944a659205` |
+| Length | 301716 |
+| Protocol | `1.0` (`CCROS_PROTOCOL_VERSION`) |
+| Firmware sources | `54f3617` |
+| Host package | `clearcore_bridge` `0.1.0` |
+
+This image keeps the 0.1.4 wire protocol and joint map. The additions below are backward compatible; it was flashed from this exact file and verified on the bench (board `10.168.41.5`).
+
+Changes since 0.1.4:
+
+- **Configurable limit-switch polarity (NO/NC).** New `configure` keys `pos_lim_nc_x..a` / `neg_lim_nc_x..a`: `false` (default) is normally-open / active-high, `true` is normally-closed / active-low, which trips on a cut wire or lost connection. Stored as NVM version 4; a version 3 blob migrates cleanly and defaults every input to active-high. Reported in `get_config` and toggled in the USB menu. (`5f2f098`)
+- **ROS diagnostics.** A third XRCE writer publishes `diagnostic_msgs/DiagnosticArray` on `rt/diagnostics` at 2 Hz: one `DiagnosticStatus` for the controller (enabled, moving, estop, fault, watchdog, test_mode, travel_limit) plus one per active axis (enabled, in_fault, hlfb), with `level` OK/WARN/ERROR. ROS consumers now see faults, e-stop, watchdog, and limit stops without the TCP session. (`54f3617`)
+
+The adoption validation matrix is [../docs/VALIDATION.md](../docs/VALIDATION.md); hardware rows added this cycle cover the NO/NC polarity and the diagnostics topic.
+
+Flash instructions are in [../docs/FIRST_MOTOR.md](../docs/FIRST_MOTOR.md).
+
 ## 0.1.4
 
 | | |
