@@ -770,9 +770,22 @@ static bool PollTravel(uint8_t axis) {
     }
     const bool moving = StepsActive(m);
     const bool posDir = m->StatusReg().bit.MoveDirection != 0;
-    if (moving && ((posDir && HwLimitOn(axis, true)) || (!posDir && HwLimitOn(axis, false)))) {
+    const int32_t cur = m->PositionRefCommanded();
+    /* Physical travel direction from the commanded motion, not just the
+     * latched MoveDirection status bit: an in-flight absolute (set_joints)
+     * move keeps g_goalValid set with the target ahead of the current step,
+     * so keying off the status bit alone missed mid-move limit hits. */
+    const bool cmdPos = g_velCmd[axis] > 0 || (g_goalValid[axis] && g_goalSteps[axis] > cur) ||
+                        (g_axisTrack[axis] && g_trackVel[axis] > 0.f);
+    const bool cmdNeg = g_velCmd[axis] < 0 || (g_goalValid[axis] && g_goalSteps[axis] < cur) ||
+                        (g_axisTrack[axis] && g_trackVel[axis] < 0.f);
+    const bool goingPos = (moving && posDir) || cmdPos;
+    const bool goingNeg = (moving && !posDir) || cmdNeg;
+    const bool hitPos = goingPos && HwLimitOn(axis, true);
+    const bool hitNeg = goingNeg && HwLimitOn(axis, false);
+    if (hitPos || hitNeg) {
         HaltAxis(axis);
-        snprintf(g_limitErr, sizeof(g_limitErr), "%s %s limit active", AxisName(axis), posDir ? "pos" : "neg");
+        snprintf(g_limitErr, sizeof(g_limitErr), "%s %s limit active", AxisName(axis), hitPos ? "pos" : "neg");
         NoteTravelLimit(g_limitErr);
         return true;
     }
@@ -782,11 +795,6 @@ static bool PollTravel(uint8_t axis) {
     }
     const double q = MotorToJoint(axis, (double)m->PositionRefCommanded() / spu);
     const double eps = (0.5 / spu) * g_gear[axis];
-    const int32_t cur = m->PositionRefCommanded();
-    const bool cmdPos = g_velCmd[axis] > 0 || (g_goalValid[axis] && g_goalSteps[axis] > cur) ||
-                        (g_axisTrack[axis] && g_trackVel[axis] > 0.f);
-    const bool cmdNeg = g_velCmd[axis] < 0 || (g_goalValid[axis] && g_goalSteps[axis] < cur) ||
-                        (g_axisTrack[axis] && g_trackVel[axis] < 0.f);
     const bool towardMax = g_direction[axis] > 0 ? ((moving && posDir) || cmdPos)
                                                  : ((moving && !posDir) || cmdNeg);
     const bool towardMin = g_direction[axis] > 0 ? ((moving && !posDir) || cmdNeg)
