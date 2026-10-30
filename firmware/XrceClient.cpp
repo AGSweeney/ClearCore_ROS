@@ -26,6 +26,7 @@ static const uint8_t XRCE_KIND_DATAWRITER = 0x05;
 static const uint16_t XRCE_MTU = 512;
 static const uint32_t XRCE_RETRY_MS = 1000;
 static const uint32_t XRCE_PUBLISH_MS = 50;
+static const uint32_t XRCE_DIAG_MS = 500;
 static const uint32_t XRCE_HEARTBEAT_MS = 1000;
 static const uint32_t XRCE_AGENT_LOST_MS = 3000;
 static const uint32_t XRCE_TIME_SYNC_MS = 1000;
@@ -46,6 +47,12 @@ static const char kHlfbTopicXml[] =
 static const char kHlfbWriterXml[] =
     "<dds><data_writer><topic><kind>NO_KEY</kind><name>rt/hlfb_duty</name>"
     "<dataType>sensor_msgs::msg::dds_::JointState_</dataType></topic></data_writer></dds>";
+static const char kDiagTopicXml[] =
+    "<dds><topic><name>rt/diagnostics</name>"
+    "<dataType>diagnostic_msgs::msg::dds_::DiagnosticArray_</dataType></topic></dds>";
+static const char kDiagWriterXml[] =
+    "<dds><data_writer><topic><kind>NO_KEY</kind><name>rt/diagnostics</name>"
+    "<dataType>diagnostic_msgs::msg::dds_::DiagnosticArray_</dataType></topic></data_writer></dds>";
 
 enum XrceState {
     XRCE_OFF = 0,
@@ -56,6 +63,8 @@ enum XrceState {
     XRCE_CREATE_WRITER,
     XRCE_CREATE_TOPIC_HLFB,
     XRCE_CREATE_WRITER_HLFB,
+    XRCE_CREATE_TOPIC_DIAG,
+    XRCE_CREATE_WRITER_DIAG,
     XRCE_STREAM
 };
 
@@ -86,6 +95,7 @@ static uint16_t g_bestEffortSeq = 0;
 static uint16_t g_waitRequest = 0;
 static uint32_t g_lastSendMs = 0;
 static uint32_t g_lastPubMs = 0;
+static uint32_t g_lastDiagMs = 0;
 static uint32_t g_lastRxMs = 0;
 static uint32_t g_lastHeartbeatMs = 0;
 static uint32_t g_lastTimeSyncMs = 0;
@@ -327,7 +337,7 @@ static void PutNames(XrceBuf *body) {
 }
 
 static bool SendWriter(uint16_t writerId, const uint8_t *body, uint16_t n) {
-    uint8_t frame[640];
+    uint8_t frame[1024];
     XrceBuf b = {frame, 0, sizeof(frame)};
     Header(&b, XRCE_STREAM_BEST_EFFORT, g_bestEffortSeq);
     const uint16_t sub = BeginSub(&b, 7, 0);
@@ -384,6 +394,68 @@ static void SendJointState() {
     }
     if (SendWriter(2, body.data, body.n)) {
         g_lastPubMs = Milliseconds();
+    }
+}
+
+static void PutKeyValue(XrceBuf *b, const char *key, const char *value) {
+    PutStr(b, key);
+    PutStr(b, value);
+}
+
+/* diagnostic_msgs/DiagnosticArray on rt/diagnostics: one DiagnosticStatus for
+ * the controller plus one per active axis, so a ROS consumer sees faults,
+ * e-stop, the watchdog, limits, and HLFB without the TCP session. Best-effort,
+ * low rate; CDR alignment is from the start of the body, as for JointState. */
+static void SendDiagnostics() {
+    if (!g_timeSynced) {
+        return;
+    }
+    CcrosDiag d;
+    MotionFillDiag(&d);
+    uint8_t raw[768];
+    XrceBuf body = {raw, 0, sizeof(raw)};
+    PutStamp(&body, d.time_ms); /* Header: stamp + empty frame_id */
+    uint32_t nAxes = 0;
+    for (uint8_t a = 0; a < 4; a++) {
+        if (d.axis_on[a]) {
+            nAxes++;
+        }
+    }
+    PutU32(&body, 1u + nAxes); /* status[] length */
+
+    const bool err = (d.flags & (CCROS_FLAG_FAULT | CCROS_FLAG_ESTOP | CCROS_FLAG_WATCHDOG)) != 0;
+    const bool warn = d.test_mode || strcmp(d.travel_limit, "none") != 0;
+    PutU8(&body, (uint8_t)(err ? 2u : (warn ? 1u : 0u))); /* level */
+    PutStr(&body, "clearcore_ros: controller");
+    PutStr(&body, err ? "fault/estop/watchdog active" : (warn ? "warning" : "ok"));
+    PutStr(&body, "clearcore");
+    PutU32(&body, 7); /* values[] */
+    PutKeyValue(&body, "enabled", (d.flags & CCROS_FLAG_ENABLED) ? "true" : "false");
+    PutKeyValue(&body, "moving", (d.flags & CCROS_FLAG_MOVING) ? "true" : "false");
+    PutKeyValue(&body, "estop", (d.flags & CCROS_FLAG_ESTOP) ? "true" : "false");
+    PutKeyValue(&body, "fault", (d.flags & CCROS_FLAG_FAULT) ? "true" : "false");
+    PutKeyValue(&body, "watchdog", (d.flags & CCROS_FLAG_WATCHDOG) ? "true" : "false");
+    PutKeyValue(&body, "test_mode", d.test_mode ? "true" : "false");
+    PutKeyValue(&body, "travel_limit", d.travel_limit);
+
+    for (uint8_t a = 0; a < 4; a++) {
+        if (!d.axis_on[a]) {
+            continue;
+        }
+        const bool axisErr = d.axis_in_fault[a] || strcmp(d.axis_alerts[a], "none") != 0;
+        char name[40];
+        snprintf(name, sizeof(name), "clearcore_ros: %s", MotionJointName(a));
+        PutU8(&body, (uint8_t)(axisErr ? 2u : 0u));
+        PutStr(&body, name);
+        PutStr(&body, axisErr ? d.axis_alerts[a] : "ok");
+        PutStr(&body, MotionJointName(a));
+        PutU32(&body, 3); /* values[] */
+        PutKeyValue(&body, "enabled", d.axis_enabled[a] ? "true" : "false");
+        PutKeyValue(&body, "in_fault", d.axis_in_fault[a] ? "true" : "false");
+        PutKeyValue(&body, "hlfb", d.axis_hlfb[a]);
+    }
+    if (SendWriter(3, body.data, body.n)) {
+        g_lastDiagMs = Milliseconds();
     }
 }
 
@@ -444,6 +516,12 @@ static void StartCreate(XrceState next, bool newRequest) {
     } else if (next == XRCE_CREATE_WRITER_HLFB) {
         ObjectRaw(2, XRCE_KIND_DATAWRITER, self);
         SendCreate(XRCE_KIND_DATAWRITER, self, pub, 0, kHlfbWriterXml);
+    } else if (next == XRCE_CREATE_TOPIC_DIAG) {
+        ObjectRaw(3, XRCE_KIND_TOPIC, self);
+        SendCreate(XRCE_KIND_TOPIC, self, part, 0, kDiagTopicXml);
+    } else if (next == XRCE_CREATE_WRITER_DIAG) {
+        ObjectRaw(3, XRCE_KIND_DATAWRITER, self);
+        SendCreate(XRCE_KIND_DATAWRITER, self, pub, 0, kDiagWriterXml);
     }
     g_state = next;
 }
@@ -462,8 +540,13 @@ static void Advance() {
     } else if (g_state == XRCE_CREATE_TOPIC_HLFB) {
         StartCreate(XRCE_CREATE_WRITER_HLFB, true);
     } else if (g_state == XRCE_CREATE_WRITER_HLFB) {
+        StartCreate(XRCE_CREATE_TOPIC_DIAG, true);
+    } else if (g_state == XRCE_CREATE_TOPIC_DIAG) {
+        StartCreate(XRCE_CREATE_WRITER_DIAG, true);
+    } else if (g_state == XRCE_CREATE_WRITER_DIAG) {
         g_state = XRCE_STREAM;
         g_lastPubMs = 0;
+        g_lastDiagMs = 0;
         g_lastHeartbeatMs = Milliseconds();
         g_lastRxMs = Milliseconds();
     }
@@ -610,6 +693,9 @@ void XrcePoll() {
         if (g_lastPubMs == 0 || (now - g_lastPubMs) >= XRCE_PUBLISH_MS) {
             SendJointState();
         }
+        if (g_lastDiagMs == 0 || (now - g_lastDiagMs) >= XRCE_DIAG_MS) {
+            SendDiagnostics();
+        }
         return;
     }
     if (g_waiting && (now - g_lastSendMs) >= XRCE_RETRY_MS) {
@@ -625,7 +711,9 @@ const char *XrceStateName() {
         case XRCE_CREATE_PUB:
         case XRCE_CREATE_WRITER:
         case XRCE_CREATE_TOPIC_HLFB:
-        case XRCE_CREATE_WRITER_HLFB: return "creating";
+        case XRCE_CREATE_WRITER_HLFB:
+        case XRCE_CREATE_TOPIC_DIAG:
+        case XRCE_CREATE_WRITER_DIAG: return "creating";
         case XRCE_STREAM: return "streaming";
         case XRCE_OFF:
         default: return "off";

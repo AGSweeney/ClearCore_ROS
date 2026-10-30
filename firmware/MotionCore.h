@@ -56,6 +56,24 @@ struct MotionConfigPatch {
 const char *MotionJointName(uint8_t axis);
 bool MotionAxisRotary(uint8_t axis);
 
+/* Controller + per-axis health for the ROS diagnostics publisher. Mirrors the
+ * session get_status fields the ROS graph cannot otherwise see. */
+struct CcrosDiag {
+    uint32_t time_ms;
+    uint8_t flags;        /* CCROS_FLAG_* */
+    bool test_mode;
+    uint8_t axis_mask;
+    char alerts[80];      /* aggregate alert names, "none" if clear */
+    char travel_limit[48];
+    bool axis_on[CCROS_AXIS_COUNT];
+    bool axis_enabled[CCROS_AXIS_COUNT];
+    bool axis_in_fault[CCROS_AXIS_COUNT];
+    char axis_alerts[CCROS_AXIS_COUNT][64];
+    char axis_hlfb[CCROS_AXIS_COUNT][12];
+    float axis_hlfb_duty[CCROS_AXIS_COUNT];
+};
+void MotionFillDiag(CcrosDiag *out);
+
 bool MotionInit();
 void MotionPoll();
 

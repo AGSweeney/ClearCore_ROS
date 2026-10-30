@@ -74,6 +74,7 @@ Earlier firmware rows keep the image that was on the bench.
 | Withhold until TIMESTAMP_REPLY | No `JointState` before reply; then agent-clock stamps | `host/xrce_check.py` | 0.1.2, 0.1.3 | 0.1.0 | `hardware-bench` | 0.1.3: three samples, `effort_len=0` |
 | Empty effort + `hlfb_duty` | Writer 1 rejects filled effort; writer 2 is HLFB | `host/test_xrce_payloads.py` | n/a | 0.1.0 | `automated-sim` | `test_filled_effort_joint_states_rejected` |
 | Move while agent publishes | 0 → 0.030 m → 0 on `/joint_states` | micro-ROS agent | 0.1.0 | 0.1.0 | `hardware-bench` | releases/README 0.1.0; effort then still HLFB/100 |
+| Diagnostics published on `rt/diagnostics` | `diagnostic_msgs/DiagnosticArray`: controller + per-axis status, level reflects state | `host/xrce_check.py` | post-0.1.4 | 0.1.0 | `hardware-bench` | 2026-10-30, board `10.168.41.5` → checker on `10.168.41.1:8888`: all three topics created; DIAG decoded `statuses=3` (controller + joint_x + joint_y), fields match `get_status`; level went `OK`→`WARN` when `test_mode` was enabled. `XRCE_OK samples=3 hlfb=2 diag=1`. |
 
 ## Known transient: MotorFaulted after an abrupt stop
 

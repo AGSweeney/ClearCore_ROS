@@ -53,6 +53,11 @@ class Cdr:
         while (self.i - self.origin) % n:
             self.i += 1
 
+    def u8(self) -> int:
+        v = self.data[self.i]
+        self.i += 1
+        return v
+
     def u32(self) -> int:
         self.align(4)
         v = struct.unpack_from("<I", self.data, self.i)[0]
@@ -130,21 +135,55 @@ def joint_from_write(payload: bytes) -> str | None:
     return None
 
 
+def diag_from_write(payload: bytes) -> str | None:
+    """Decode WRITE_DATA for writer 3 (rt/diagnostics, diagnostic_msgs/DiagnosticArray)."""
+    if len(payload) < 8:
+        return None
+    cdr = Cdr(payload, 4)
+    try:
+        sec = cdr.u32()
+        _nsec = cdr.u32()
+        _frame = cdr.string()
+        nstatus = cdr.u32()
+        statuses = []
+        for _ in range(nstatus):
+            level = cdr.u8()
+            name = cdr.string()
+            _msg = cdr.string()
+            _hwid = cdr.string()
+            nkv = cdr.u32()
+            kvs = [(cdr.string(), cdr.string()) for _ in range(nkv)]
+            statuses.append((level, name, kvs))
+    except (struct.error, IndexError, UnicodeDecodeError):
+        return None
+    if sec == 0 or nstatus == 0:
+        return None
+    lv = {0: "OK", 1: "WARN", 2: "ERROR", 3: "STALE"}
+    parts = []
+    for level, name, kvs in statuses:
+        short = name.split(":")[-1].strip()
+        kv = " ".join(f"{k}={v}" for k, v in kvs)
+        parts.append(f"[{lv.get(level, level)}] {short}: {kv}")
+    return "DIAG sec=%d statuses=%d | %s" % (sec, nstatus, " || ".join(parts))
+
+
 def main() -> None:
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 9204
+    run_s = float(sys.argv[2]) if len(sys.argv) > 2 else 20.0
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(("0.0.0.0", port))
     sock.settimeout(0.5)
     print(f"listening {port}", flush=True)
-    deadline = time.time() + 20
+    deadline = time.time() + run_s
     samples = 0
     hlfb = 0
+    diag = 0
     addr = None
     sync_reply: bytes | None = None
     sync_addr = None
     sync_due: float | None = None
     sync_sent = False
-    while time.time() < deadline and (samples < 3 or hlfb < 1):
+    while time.time() < deadline and (samples < 3 or hlfb < 1 or diag < 1):
         if sync_reply is not None and sync_due is not None and time.time() >= sync_due:
             sock.sendto(sync_reply, sync_addr)
             print("TIMESTAMP_REPLY", flush=True)
@@ -195,6 +234,13 @@ def main() -> None:
             elif mid == 7:
                 if not sync_sent:
                     raise SystemExit("JointState before TIMESTAMP_REPLY")
+                if writer_id(payload) == 3:
+                    text = diag_from_write(payload)
+                    if text is None:
+                        raise SystemExit("invalid DiagnosticArray")
+                    print(text, flush=True)
+                    diag += 1
+                    continue
                 text = joint_from_write(payload)
                 if text is None:
                     raise SystemExit("unsynced or invalid JointState")
@@ -209,7 +255,9 @@ def main() -> None:
         raise SystemExit("no JointState sample")
     if hlfb < 1:
         raise SystemExit("no hlfb_duty sample")
-    print(f"XRCE_OK samples={samples} hlfb={hlfb}", flush=True)
+    if diag < 1:
+        raise SystemExit("no diagnostics sample")
+    print(f"XRCE_OK samples={samples} hlfb={hlfb} diag={diag}", flush=True)
 
 
 if __name__ == "__main__":

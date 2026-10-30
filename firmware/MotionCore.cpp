@@ -2491,6 +2491,63 @@ static const char *HlfbStateName(MotorDriver::HlfbStates s) {
     }
 }
 
+static void FormatAxisAlerts(uint8_t axis, char *dst, uint16_t len) {
+    dst[0] = '\0';
+    const uint32_t bits = AlertBits(axis);
+    if (bits == 0) {
+        snprintf(dst, len, "none");
+        return;
+    }
+    bool first = true;
+    if (bits & (1u << 0)) AppendAlertName(dst, len, &first, "in_alert");
+    if (bits & (1u << 1)) AppendAlertName(dst, len, &first, "pos_limit");
+    if (bits & (1u << 2)) AppendAlertName(dst, len, &first, "neg_limit");
+    if (bits & (1u << 3)) AppendAlertName(dst, len, &first, "sensor_estop");
+    if (bits & (1u << 4)) AppendAlertName(dst, len, &first, "motor_disabled");
+    if (bits & (1u << 5)) AppendAlertName(dst, len, &first, "motor_faulted");
+    if (dst[0] == '\0') {
+        snprintf(dst, len, "alert_0x%lx", (unsigned long)bits);
+    }
+}
+
+void MotionFillDiag(CcrosDiag *out) {
+    memset(out, 0, sizeof(*out));
+    out->time_ms = Milliseconds();
+    out->test_mode = g_testMode;
+    out->axis_mask = (uint8_t)g_axisMask;
+    if (g_enabled) out->flags |= CCROS_FLAG_ENABLED;
+    if (AnyMoving()) out->flags |= CCROS_FLAG_MOVING;
+    if (g_interrupted || HardwareEstop()) out->flags |= CCROS_FLAG_ESTOP;
+    if (g_watchdogTripped) out->flags |= CCROS_FLAG_WATCHDOG;
+    for (uint8_t a = 0; a < CCROS_AXIS_COUNT; a++) {
+        if (AxisFaulted(a)) {
+            out->flags |= CCROS_FLAG_FAULT;
+        }
+    }
+    FormatAlerts(out->alerts, sizeof(out->alerts));
+    snprintf(out->travel_limit, sizeof(out->travel_limit), "%s",
+             g_travelLimit[0] ? g_travelLimit : "none");
+    for (uint8_t a = 0; a < CCROS_AXIS_COUNT; a++) {
+        out->axis_on[a] = AxisOn(a);
+        MotorDriver *m = MotorFor(a);
+        const MotorDriver::StatusRegMotor sr(m ? m->StatusReg().reg : 0u);
+        out->axis_enabled[a] = sr.bit.Enabled != 0;
+        out->axis_in_fault[a] = sr.bit.MotorInFault != 0;
+        MotorDriver::HlfbStates hlfb = MotorDriver::HLFB_UNKNOWN;
+        float duty = 0.f;
+        if (m) {
+            hlfb = m->HlfbState();
+            duty = m->HlfbPercent();
+            if (!(duty >= -100.f && duty <= 100.f)) {
+                duty = 0.f;
+            }
+        }
+        snprintf(out->axis_hlfb[a], sizeof(out->axis_hlfb[a]), "%s", HlfbStateName(hlfb));
+        out->axis_hlfb_duty[a] = duty / 100.f;
+        FormatAxisAlerts(a, out->axis_alerts[a], sizeof(out->axis_alerts[a]));
+    }
+}
+
 void MotionFillStatusJson(char *buf, uint16_t len) {
     CcrosState st;
     MotionFillState(&st);
