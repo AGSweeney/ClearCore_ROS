@@ -55,7 +55,7 @@ Zero is the pose at boot, or the pose after `home` with `zero` true. `0.01` m is
 | `host/ccros_cli.py` | Bench client. No ROS install. |
 | `host/test_wire.py`, `host/test_safety.py` | Codec and bridge checks. No board. |
 | `host/xrce_check.py` | Accepts the XRCE session and prints `JointState` |
-| `host/clearpath_usb.py` | Reads a ClearPath MC/SD's own alerts, status, and position error over its USB (MSP) port. Read-only; close MSP first. |
+| `host/clearpath_usb.py` | Reads a ClearPath MC/SD's own alerts, status, and position error over its USB (MSP) port. `scope` streams one monitor variable, such as tracking error, at about 845 Hz, then restores the motor's setting. Close MSP first. See `docs/CLEARPATH_USB.md`. |
 | `host/test_bench_two_axis.py` | Two-axis motion bench on M0/M1 with fault logging. Moves real motors. |
 | `host/test_m0_live.py` | Repeats the first-motor 10 mm move. Pass the board address. It restores `axis_mask` and the soft-limit flags. |
 | `ros2_ws/src/clearcore_bridge` | `/joint_states`, Trigger services, `FollowJointTrajectory` |
