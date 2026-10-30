@@ -234,6 +234,20 @@ The body has no CDR encapsulation header. Fast DDS adds that header. A second en
 
 A reliable heartbeat is sent about once a second. If no agent packet arrives for 3 s, the client drops the session and sends `CREATE_CLIENT` again. `get_status` reports `xrce` as `off`, `connecting`, `creating`, or `streaming`.
 
+### QoS and the ROS consumer contract
+
+| Topic | Type | Rate | Content |
+|-------|------|------|---------|
+| `rt/joint_states` | `sensor_msgs/JointState` | 20 Hz | position, velocity; empty `effort` |
+| `rt/hlfb_duty` | `sensor_msgs/JointState` | 20 Hz | HLFB/100 in `effort`; empty position, velocity |
+| `rt/diagnostics` | `diagnostic_msgs/DiagnosticArray` | 2 Hz | controller + per-axis health |
+
+All three are written on the XRCE **best-effort** stream, so a datagram lost between the board and the agent is not retransmitted; treat the topics as streaming telemetry, not a guaranteed-delivery log. Only `CREATE`, `TIMESTAMP`, and the heartbeat use the reliable stream.
+
+The data writers declare no explicit `<qos>`, so the agent applies its default. Under Fast DDS (the micro-ROS agent's default middleware) that is `RELIABLE`, `VOLATILE`, `KEEP_LAST` depth 1. A ROS 2 subscriber with the default profile (`RELIABLE`) or a sensor profile (`BEST_EFFORT`) is compatible — a `RELIABLE` writer satisfies a `BEST_EFFORT` reader. `VOLATILE` means a late-joining subscriber receives nothing until the next sample, and depth 1 keeps only the most recent. The reliable DDS default does not undo the best-effort XRCE hop above; end-to-end delivery is still lossy. To pin QoS (for example `BEST_EFFORT` sensor QoS on the two `JointState` topics), add a `<qos>` block to the writer XML in `XrceClient.cpp`; none is set today.
+
+All three topics are withheld until the first `TIMESTAMP_REPLY`, and every `header.stamp` is the agent's wall clock (`agent_epoch + (board_ms - t1_ms) * 1e6`), not ROS `/clock`; `frame_id` is empty and `use_sim_time` does not apply. See the stamp notes above. After an agent loss and reconnect the offset is re-measured, so stamps can step at that point.
+
 `host/xrce_check.py` answers the session and prints the sample. It is not a DDS bridge. A micro-ROS agent is what places `/joint_states` and `/hlfb_duty` on a ROS graph, from the node `clearcore_ros`. `clearcore_bridge` also publishes `/joint_states`, for the joints in `axis_mask`, stamped when the host receives the sample, with empty `effort`, and `/hlfb_duty` with the HLFB proxy. `joint_state_broadcaster` publishes `/joint_states` from `ros2_control` without effort; HLFB is the extra state `hlfb_duty` on `/dynamic_joint_states`. Stop those other publishers before treating `/joint_states` as the agent stream.
 
 On the bench, with only `clearcore_ros` publishing, both installed axes moved from 0 to 0.030 m and back to 0. The agent samples reached those same endpoints, the board status matched, and there were no alerts.
