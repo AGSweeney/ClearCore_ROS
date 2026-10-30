@@ -75,6 +75,7 @@ Earlier firmware rows keep the image that was on the bench.
 | Empty effort + `hlfb_duty` | Writer 1 rejects filled effort; writer 2 is HLFB | `host/test_xrce_payloads.py` | n/a | 0.1.0 | `automated-sim` | `test_filled_effort_joint_states_rejected` |
 | Move while agent publishes | 0 → 0.030 m → 0 on `/joint_states` | micro-ROS agent | 0.1.0 | 0.1.0 | `hardware-bench` | releases/README 0.1.0; effort then still HLFB/100 |
 | Diagnostics published on `rt/diagnostics` | `diagnostic_msgs/DiagnosticArray`: controller + per-axis status, level reflects state | `host/xrce_check.py` | post-0.1.4 | 0.1.0 | `hardware-bench` | 2026-10-30, board `10.168.41.5` → checker on `10.168.41.1:8888`: all three topics created; DIAG decoded `statuses=3` (controller + joint_x + joint_y), fields match `get_status`; level went `OK`→`WARN` when `test_mode` was enabled. `XRCE_OK samples=3 hlfb=2 diag=1`. |
+| Agent restart / reconnect | Agent vanishes → board leaves `streaming`; agent returns → board re-handshakes and resumes all topics | `host/xrce_check.py` | 0.1.5 | 0.1.0 | `hardware-bench` | 2026-10-30, board `10.168.41.5`: reached `streaming`+`synced` with diagnostics; emulator stopped → board dropped out of `streaming` (agent-lost ~3 s); emulator restarted → board re-created all three topics, re-synced, and resumed joint_states + diagnostics. |
 
 ## Known transient: MotorFaulted after an abrupt stop
 
@@ -84,7 +85,9 @@ On the bench (2026-10-30) the ClearCore occasionally latches `MotorFaulted`
 rare and not reproducible on demand: seen twice across 100+ enable cycles, four
 15-second idle-enabled holds, and dozens of stop/estop/watchdog trials; it did
 **not** appear in 80 clean enable/disable cycles, nor in 5/5 watchdog-trip or
-5/5 estop-recover trials run to catch it.
+5/5 estop-recover trials run to catch it, nor in a 180 s two-axis soak of 165
+0 ↔ 0.12 m cycles (2026-10-30, firmware 0.1.5): zero fault, watchdog, or alert
+events and no recoveries.
 
 It tracks abrupt-stop and re-enable sequences (watchdog trip mid-move, or
 re-enable shortly after an estop), where the motor's HLFB briefly reads
