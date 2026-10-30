@@ -1,0 +1,30 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# Editor / IDE local state
+.cursor/
+.vs/
+
+# Firmware build outputs (keep Debug/Makefile)
+firmware/Debug/*.o
+firmware/Debug/*.d
+firmware/Debug/*.bin
+firmware/Debug/*.elf
+firmware/Debug/*.hex
+firmware/Debug/*.lss
+firmware/Debug/*.map
+firmware/Debug/*.srec
+firmware/Debug/*.eep
+firmware/Debug/*.uf2
+firmware/Debug/Device_Startup/*.o
+firmware/Debug/Device_Startup/*.d
+
+# Host build outputs
+host/test_protocol.exe
+host/*.o
+
+# colcon
+ros2_ws/build/
+ros2_ws/install/
+ros2_ws/log/

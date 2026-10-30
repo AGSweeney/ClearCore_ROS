@@ -1,0 +1,5 @@
+# Shell scripts run under WSL/Linux and break with CRLF.
+*.sh text eol=lf
+
+# Release images
+*.bin binary

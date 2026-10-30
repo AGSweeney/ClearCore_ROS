@@ -10,7 +10,7 @@
  *   UDP 9202           "CLEARCORE_ROS_DISCOVER?"
  *
  * ClearPath MSP: Step and Direction, HLFB ASG-Position w/Measured Torque, 482 Hz.
- * See ClearCoreROS/PROTOCOL.md.
+ * See PROTOCOL.md.
  */
 
 #include "ClearCore.h"

@@ -65,7 +65,7 @@
       </ToolNumber>
       <ToolName xmlns="">Custom Programming Tool</ToolName>
     </custom>
-    <CustomProgrammingToolCommand>"$(MSBuildProjectDirectory)\..\..\Tools\flash_clearcore.cmd" "$(OutputDirectory)\$(OutputFileName).bin"</CustomProgrammingToolCommand>
+    <CustomProgrammingToolCommand>"$(MSBuildProjectDirectory)\..\external\EnhancedClearCoreLibrary\Tools\flash_clearcore.cmd" "$(OutputDirectory)\$(OutputFileName).bin"</CustomProgrammingToolCommand>
     <com_atmel_avrdbg_tool_samice>
       <ToolOptions>
         <InterfaceProperties>
@@ -115,9 +115,9 @@
     <ListValues>
       <Value>%24(PackRepoDir)\arm\CMSIS\4.5.0\CMSIS\Include\</Value>
       <Value>%24(PackRepoDir)\atmel\SAME53_DFP\1.1.118\include</Value>
-      <Value>../../../libClearCore/inc</Value>
-      <Value>../../../LwIP/LwIP/src/include</Value>
-      <Value>../../../LwIP/LwIP/port/include</Value>
+      <Value>../../external/EnhancedClearCoreLibrary/libClearCore/inc</Value>
+      <Value>../../external/EnhancedClearCoreLibrary/LwIP/LwIP/src/include</Value>
+      <Value>../../external/EnhancedClearCoreLibrary/LwIP/LwIP/port/include</Value>
             <Value>..</Value>
             <Value>../third_party/jsmn</Value>
       <Value>C:/Program Files (x86)\Atmel\Studio\7.0\Packs\arm\CMSIS\5.4.0\CMSIS\Core\Include\</Value>
@@ -138,14 +138,14 @@
   </armgcccpp.linker.libraries.Libraries>
   <armgcccpp.linker.libraries.LibrarySearchPaths>
     <ListValues>
-      <Value>../../Depreciated/MotionStreamingExample/Device_Startup</Value>
+      <Value>../../external/EnhancedClearCoreLibrary/Depreciated/MotionStreamingExample/Device_Startup</Value>
       <Value>%24(PackRepoDir)\arm\CMSIS\4.5.0\CMSIS\Lib\GCC</Value>
-      <Value>%24(ProjectDir)\..\..\Depreciated\MotionStreamingExample\Device_Startup</Value>
+      <Value>%24(ProjectDir)\..\external\EnhancedClearCoreLibrary\Depreciated\MotionStreamingExample\Device_Startup</Value>
     </ListValues>
   </armgcccpp.linker.libraries.LibrarySearchPaths>
   <armgcccpp.linker.optimization.GarbageCollectUnusedSections>True</armgcccpp.linker.optimization.GarbageCollectUnusedSections>
   <armgcccpp.linker.memorysettings.ExternalRAM />
-  <armgcccpp.linker.miscellaneous.LinkerFlags>-T../../Depreciated/MotionStreamingExample/Device_Startup/flash_with_bootloader.ld -mfloat-abi=hard -mfpu=fpv4-sp-d16</armgcccpp.linker.miscellaneous.LinkerFlags>
+  <armgcccpp.linker.miscellaneous.LinkerFlags>-T../../external/EnhancedClearCoreLibrary/Depreciated/MotionStreamingExample/Device_Startup/flash_with_bootloader.ld -mfloat-abi=hard -mfpu=fpv4-sp-d16</armgcccpp.linker.miscellaneous.LinkerFlags>
   <armgcccpp.assembler.general.IncludePaths>
     <ListValues>
       <Value>%24(PackRepoDir)\atmel\SAME53_DFP\1.1.118\include</Value>
@@ -163,7 +163,7 @@
   </armgcccpp.preprocessingassembler.general.IncludePaths>
 </ArmGccCpp>
     </ToolchainSettings>
-    <PostBuildEvent>"$(SolutionDir)\..\..\Tools\uf2-builder\Release\uf2-builder.exe" "$(OutputDirectory)\$(OutputFileName).bin" "$(OutputDirectory)\$(OutputFileName).uf2"</PostBuildEvent>
+    <PostBuildEvent>"$(SolutionDir)\..\external\EnhancedClearCoreLibrary\Tools\uf2-builder\Release\uf2-builder.exe" "$(OutputDirectory)\$(OutputFileName).bin" "$(OutputDirectory)\$(OutputFileName).uf2"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <ToolchainSettings>
@@ -203,9 +203,9 @@
     <ListValues>
       <Value>%24(PackRepoDir)\arm\CMSIS\4.5.0\CMSIS\Include\</Value>
       <Value>%24(PackRepoDir)\atmel\SAME53_DFP\1.1.118\include</Value>
-      <Value>../../../libClearCore/inc</Value>
-      <Value>../../../LwIP/LwIP/src/include</Value>
-      <Value>../../../LwIP/LwIP/port/include</Value>
+      <Value>../../external/EnhancedClearCoreLibrary/libClearCore/inc</Value>
+      <Value>../../external/EnhancedClearCoreLibrary/LwIP/LwIP/src/include</Value>
+      <Value>../../external/EnhancedClearCoreLibrary/LwIP/LwIP/port/include</Value>
             <Value>..</Value>
             <Value>../third_party/jsmn</Value>
       <Value>%24(PackRepoDir)\arm\CMSIS\5.4.0\CMSIS\Core\Include\</Value>
@@ -226,14 +226,14 @@
   </armgcccpp.linker.libraries.Libraries>
   <armgcccpp.linker.libraries.LibrarySearchPaths>
     <ListValues>
-      <Value>../../Depreciated/MotionStreamingExample/Device_Startup</Value>
+      <Value>../../external/EnhancedClearCoreLibrary/Depreciated/MotionStreamingExample/Device_Startup</Value>
       <Value>%24(PackRepoDir)\arm\CMSIS\4.5.0\CMSIS\Lib\GCC</Value>
-      <Value>%24(ProjectDir)\..\..\Depreciated\MotionStreamingExample\Device_Startup</Value>
+      <Value>%24(ProjectDir)\..\external\EnhancedClearCoreLibrary\Depreciated\MotionStreamingExample\Device_Startup</Value>
     </ListValues>
   </armgcccpp.linker.libraries.LibrarySearchPaths>
   <armgcccpp.linker.optimization.GarbageCollectUnusedSections>True</armgcccpp.linker.optimization.GarbageCollectUnusedSections>
   <armgcccpp.linker.memorysettings.ExternalRAM />
-  <armgcccpp.linker.miscellaneous.LinkerFlags>-T../../Depreciated/MotionStreamingExample/Device_Startup/flash_with_bootloader.ld -mfloat-abi=hard -mfpu=fpv4-sp-d16</armgcccpp.linker.miscellaneous.LinkerFlags>
+  <armgcccpp.linker.miscellaneous.LinkerFlags>-T../../external/EnhancedClearCoreLibrary/Depreciated/MotionStreamingExample/Device_Startup/flash_with_bootloader.ld -mfloat-abi=hard -mfpu=fpv4-sp-d16</armgcccpp.linker.miscellaneous.LinkerFlags>
   <armgcccpp.assembler.general.IncludePaths>
     <ListValues>
       <Value>%24(PackRepoDir)\atmel\SAME53_DFP\1.1.118\include</Value>
@@ -253,10 +253,10 @@
   <armgcccpp.preprocessingassembler.debugging.DebugLevel>Default (-Wa,-g)</armgcccpp.preprocessingassembler.debugging.DebugLevel>
 </ArmGccCpp>
     </ToolchainSettings>
-    <PostBuildEvent>"$(SolutionDir)\..\..\Tools\uf2-builder\Release\uf2-builder.exe" "$(OutputDirectory)\$(OutputFileName).bin" "$(OutputDirectory)\$(OutputFileName).uf2"</PostBuildEvent>
+    <PostBuildEvent>"$(SolutionDir)\..\external\EnhancedClearCoreLibrary\Tools\uf2-builder\Release\uf2-builder.exe" "$(OutputDirectory)\$(OutputFileName).bin" "$(OutputDirectory)\$(OutputFileName).uf2"</PostBuildEvent>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="..\..\Depreciated\MotionStreamingExample\Device_Startup\startup_same53.c">
+    <Compile Include="..\external\EnhancedClearCoreLibrary\Depreciated\MotionStreamingExample\Device_Startup\startup_same53.c">
       <SubType>compile</SubType>
       <Link>Device_Startup\startup_same53.c</Link>
     </Compile>
@@ -275,19 +275,19 @@
     <Compile Include="XrceClient.cpp">
       <SubType>compile</SubType>
     </Compile>
-    <None Include="..\..\Depreciated\MotionStreamingExample\Device_Startup\flash_without_bootloader.ld">
+    <None Include="..\external\EnhancedClearCoreLibrary\Depreciated\MotionStreamingExample\Device_Startup\flash_without_bootloader.ld">
       <SubType>compile</SubType>
       <Link>Device_Startup\flash_without_bootloader.ld</Link>
     </None>
-    <None Include="..\..\Depreciated\MotionStreamingExample\Device_Startup\flash_with_bootloader.ld">
+    <None Include="..\external\EnhancedClearCoreLibrary\Depreciated\MotionStreamingExample\Device_Startup\flash_with_bootloader.ld">
       <SubType>compile</SubType>
       <Link>Device_Startup\flash_with_bootloader.ld</Link>
     </None>
-    <None Include="..\..\Depreciated\MotionStreamingExample\Device_Startup\same53n19a_flash.ld">
+    <None Include="..\external\EnhancedClearCoreLibrary\Depreciated\MotionStreamingExample\Device_Startup\same53n19a_flash.ld">
       <SubType>compile</SubType>
       <Link>Device_Startup\same53n19a_flash.ld</Link>
     </None>
-    <None Include="..\..\Depreciated\MotionStreamingExample\Device_Startup\same53n19a_sram.ld">
+    <None Include="..\external\EnhancedClearCoreLibrary\Depreciated\MotionStreamingExample\Device_Startup\same53n19a_sram.ld">
       <SubType>compile</SubType>
       <Link>Device_Startup\same53n19a_sram.ld</Link>
     </None>
@@ -296,12 +296,12 @@
     <Folder Include="Device_Startup\" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\libClearCore\ClearCore.cppproj">
+    <ProjectReference Include="..\external\EnhancedClearCoreLibrary\libClearCore\ClearCore.cppproj">
       <Name>ClearCore</Name>
       <Project>{2530d5b1-8a40-4a55-95ca-2ec0b63e2088}</Project>
       <Private>True</Private>
     </ProjectReference>
-    <ProjectReference Include="..\..\LwIP\LwIP.cppproj">
+    <ProjectReference Include="..\external\EnhancedClearCoreLibrary\LwIP\LwIP.cppproj">
       <Name>LwIP</Name>
       <Project>{c373696c-5d45-4b91-ad62-a21552361596}</Project>
       <Private>True</Private>

@@ -8,7 +8,7 @@ CXX := $(QUOTE)$(TOOLCHAIN)\arm-none-eabi-g++.exe$(QUOTE)
 OBJCOPY := $(QUOTE)$(TOOLCHAIN)\arm-none-eabi-objcopy.exe$(QUOTE)
 SIZE := $(QUOTE)$(TOOLCHAIN)\arm-none-eabi-size.exe$(QUOTE)
 
-ROOT := ../../..
+ROOT := ../../external/EnhancedClearCoreLibrary
 LDSCRIPT := $(ROOT)/Depreciated/MotionStreamingExample/Device_Startup/flash_with_bootloader.ld
 
 CXXFLAGS := -mthumb -D__SAME53N19A__ -DDEBUG \

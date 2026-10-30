@@ -8,6 +8,18 @@ Start with [docs/FIRST_MOTOR.md](docs/FIRST_MOTOR.md) and the firmware file in [
 
 The motor setup matches ClearAI: Step and Direction, HLFB ASG-Position with measured torque at 482 Hz, pose from `PositionRefCommanded()`, and alert bits reported only for axes in `axis_mask`. Reported position is generated steps, not a shaft encoder.
 
+## Getting the source
+
+This project was split out of [EnhancedClearCoreLibrary](https://github.com/AGSweeney/EnhancedClearCoreLibrary), with its history. The firmware links `libClearCore` and `LwIP` from that repository, which is a submodule at `external/EnhancedClearCoreLibrary`. The ROS 2 packages and host tools do not need it.
+
+```bash
+git clone --recurse-submodules https://github.com/AGSweeney/ClearCore_ROS.git
+# or, in an existing clone:
+git submodule update --init
+```
+
+On Windows, set `git config --global core.longpaths true` first. Some paths in the library are longer than 260 characters.
+
 ## Choose a setup
 
 Three host programs talk to the same firmware. Only one of them should own motion, and only one of them should be the `/joint_states` source you are reading.
@@ -46,22 +58,24 @@ Zero is the pose at boot, or the pose after `home` with `zero` true. `0.01` m is
 | `host/test_m0_live.py` | Repeats the first-motor 10 mm move. Pass the board address. It restores `axis_mask` and the soft-limit flags. |
 | `ros2_ws/src/clearcore_bridge` | `/joint_states`, Trigger services, `FollowJointTrajectory` |
 | `ros2_ws/src/clearcore_hardware` | `ros2_control` `SystemInterface` |
+| `external/EnhancedClearCoreLibrary` | Submodule: `libClearCore`, `LwIP`, startup files, and flash tools for the firmware build |
+| `logs/` | Hardware battery and endurance run logs |
 
 ## Firmware
 
 The first-motor image is [releases/ClearCoreROS-0.1.3.bin](releases/ClearCoreROS-0.1.3.bin). Flash instructions and the tested-revision list are in [releases/README.md](releases/README.md) and [docs/FIRST_MOTOR.md](docs/FIRST_MOTOR.md). `0.1.2` withholds XRCE until TIMESTAMP_REPLY but still puts HLFB in `JointState.effort`. `0.1.1` is the joint-map image. `0.1.0` has no joint map.
 
-To build instead of using that file, open `firmware/ClearCoreROS.atsln` in Microchip Studio 7 and flash with `Tools/flash_clearcore.cmd`. Command-line build from the Debug directory, same toolchain as ClearAI:
+To build instead of using that file, open `firmware/ClearCoreROS.atsln` in Microchip Studio 7 and flash with `external/EnhancedClearCoreLibrary/Tools/flash_clearcore.cmd`. Command-line build from the Debug directory, same toolchain as ClearAI:
 
 ```powershell
-cd ClearCoreROS\firmware\Debug
+cd firmware\Debug
 & "C:\Program Files (x86)\Atmel\Studio\7.0\shellutils\make.exe" all
 ```
 
 Output: `firmware/Debug/ClearCoreROS.bin`.
 
 ```powershell
-..\..\..\Tools\flash_clearcore.cmd ClearCoreROS.bin
+..\..\external\EnhancedClearCoreLibrary\Tools\flash_clearcore.cmd ClearCoreROS.bin
 ```
 
 Flashing this image replaces whatever application is on the board. ClearAI uses the same bootloader. User NVM survives the flash. A ClearAI `CAIC` blob is left in place and is not applied. The first successful `configure`, `set_test_mode`, or `configure_network` writes a `CROS` blob over those bytes.
@@ -150,7 +164,7 @@ With the bridge and `joint_state_broadcaster` stopped, that agent topic followed
 Target is ROS 2 Jazzy on Linux. The hardware plugin uses POSIX sockets. Build on the ROS machine:
 
 ```bash
-cd ClearCoreROS/ros2_ws
+cd ros2_ws
 colcon build --symlink-install
 source install/setup.bash
 ```

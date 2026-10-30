@@ -29,18 +29,19 @@ from rclpy.node import Node
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectoryPoint
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
 HOST = os.environ.get("CCROS_HOST", "172.16.82.114")
 DURATION_S = int(os.environ.get("CCROS_BATTERY_SECONDS", "1800"))
 WS = Path(
     os.environ.get(
         "CCROS_WS",
-        "/mnt/d/CCDev/EnhancedClearCoreLibrary/ClearCoreROS/ros2_ws",
+        str(REPO_ROOT / "ros2_ws"),
     )
 )
 LOG_ROOT = Path(
     os.environ.get(
         "CCROS_LOG_ROOT",
-        "/mnt/d/CCDev/EnhancedClearCoreLibrary/ClearCoreROS/logs",
+        str(REPO_ROOT / "logs"),
     )
 )
 XY_MIN = 0.001

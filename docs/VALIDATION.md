@@ -44,7 +44,7 @@ Earlier firmware rows keep the image that was on the bench.
 
 | Scenario | Expected behavior | Path | Firmware | Host | Result | Evidence |
 |----------|-------------------|------|----------|------|--------|----------|
-| Cancellation | `GoalStatus.STATUS_CANCELED` is failure even when `error_code` is 0 | `jtc_result.goal_succeeded` used by `send_trajectory_goal.py` | n/a | 0.1.0 | `automated-sim` | `test_canceled_jtc_result_is_failure_even_if_error_code_is_zero`; commit `22b30ba` |
+| Cancellation | `GoalStatus.STATUS_CANCELED` is failure even when `error_code` is 0 | `jtc_result.goal_succeeded` used by `send_trajectory_goal.py` | n/a | 0.1.0 | `automated-sim` | `test_canceled_jtc_result_is_failure_even_if_error_code_is_zero`; commit `d86c2d0` |
 | Cancellation on hardware | Cancel an in-flight JTC goal | `joint_trajectory_controller` | 0.1.1+ | 0.1.0 | `not-tested` | Bench goal was run to completion, not canceled |
 | Connection loss | Closed stream makes plugin `read` return `ERROR` | `ClearCoreSystemHardware` / `test_clearcore_system.cpp` | n/a | 0.1.0 | `automated-sim` | gtest `ActivateWatchdogEofAndReconnect` |
 | Connection loss on hardware | Unplug host Ethernet mid-move | plugin | 0.1.3 | 0.1.0 | `not-tested` | |

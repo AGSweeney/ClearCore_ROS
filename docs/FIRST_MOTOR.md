@@ -10,7 +10,7 @@ Reported position is generated steps (`PositionRefCommanded`), not a shaft encod
 
 - A ClearCore and one ClearPath motor.
 - Python 3.10 or newer on the computer that will talk to the board.
-- This repository at a revision that lists firmware `0.1.3` in [../releases/README.md](../releases/README.md). The firmware sources for that image are git `4eeab56`.
+- This repository at a revision that lists firmware `0.1.3` in [../releases/README.md](../releases/README.md). The firmware sources for that image are git `3107a8a` (`4eeab56` in EnhancedClearCoreLibrary before the split).
 - The motor's power supply, and a way to stop the shaft if it runs the wrong direction. Keep a physical estop in the circuit.
 
 The computer and the ClearCore must be on the same Ethernet network. USB is only for flashing and for the serial log.
@@ -40,14 +40,14 @@ The running board is USB VID `2890`, PID `8022`. The bootloader is PID `0022`. T
 On Windows, from the repository root:
 
 ```powershell
-.\Tools\flash_clearcore.cmd .\ClearCoreROS\releases\ClearCoreROS-0.1.3.bin
+.\external\EnhancedClearCoreLibrary\Tools\flash_clearcore.cmd .\releases\ClearCoreROS-0.1.3.bin
 ```
 
 On Linux, install `bossac` (the BOSSA command-line tool), then enter the bootloader and write the image. The USB port name changes when the bootloader enumerates. If the first command is aimed at the running application, it drops the port; wait, then run the write against the bootloader port.
 
 ```bash
 bossac --info --debug --port=/dev/ttyACM0 --arduino-erase
-bossac --info --debug --port=/dev/ttyACM0 --usb-port --write --erase --verify --offset=0x4000 --reset ClearCoreROS/releases/ClearCoreROS-0.1.3.bin
+bossac --info --debug --port=/dev/ttyACM0 --usb-port --write --erase --verify --offset=0x4000 --reset releases/ClearCoreROS-0.1.3.bin
 ```
 
 The Windows script was the one used on the bench. The Linux lines are the same `bossac` invocation.

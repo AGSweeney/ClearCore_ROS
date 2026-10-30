@@ -24,20 +24,21 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
 HOST = os.environ.get("CCROS_HOST", "172.16.82.114")
 SESSION_PORT = 9200
 DURATION_S = int(os.environ.get("CCROS_BATTERY_SECONDS", "1800"))
 WS = Path(os.environ.get(
     "CCROS_WS",
-    "/mnt/d/CCDev/EnhancedClearCoreLibrary/ClearCoreROS/ros2_ws",
+    str(REPO_ROOT / "ros2_ws"),
 ))
 LOG_ROOT = Path(os.environ.get(
     "CCROS_LOG_ROOT",
-    "/mnt/d/CCDev/EnhancedClearCoreLibrary/ClearCoreROS/logs",
+    str(REPO_ROOT / "logs"),
 ))
 REPO = Path(os.environ.get(
     "CCROS_REPO",
-    "/mnt/d/CCDev/EnhancedClearCoreLibrary",
+    str(REPO_ROOT),
 ))
 
 # Stay inside known soft-limit envelope (X max 0.03 m).

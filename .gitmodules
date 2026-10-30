@@ -1,0 +1,3 @@
+[submodule "external/EnhancedClearCoreLibrary"]
+	path = external/EnhancedClearCoreLibrary
+	url = https://github.com/AGSweeney/EnhancedClearCoreLibrary.git
