@@ -37,6 +37,10 @@ struct MotionConfigPatch {
     uint8_t posLim[CCROS_AXIS_COUNT];
     bool hasNegLim[CCROS_AXIS_COUNT];
     uint8_t negLim[CCROS_AXIS_COUNT];
+    bool hasPosLimNc[CCROS_AXIS_COUNT];
+    bool posLimNc[CCROS_AXIS_COUNT];
+    bool hasNegLimNc[CCROS_AXIS_COUNT];
+    bool negLimNc[CCROS_AXIS_COUNT];
     bool hasName[CCROS_AXIS_COUNT];
     char name[CCROS_AXIS_COUNT][16];
     bool hasRotary[CCROS_AXIS_COUNT];

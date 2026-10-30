@@ -256,6 +256,8 @@ static void ShowAxis() {
     }
     Out("  11) + limit switch   %s", PinName(g_cur.posLim[a], p1, sizeof(p1)));
     Out("  12) - limit switch   %s", PinName(g_cur.negLim[a], p2, sizeof(p2)));
+    Out("  13) + limit polarity %s", g_cur.posLimNc[a] ? "NC (active low)" : "NO (active high)");
+    Out("  14) - limit polarity %s", g_cur.negLimNc[a] ? "NC (active low)" : "NO (active high)");
     Out("   b) Back");
     Out("Items 1, 3-8 need the motors disabled.");
     Prompt("%s> ", kMotorNames[a]);
@@ -408,10 +410,22 @@ static void ChooseAxis(uint32_t n) {
         case 11:
         case 12:
             Out("  Inputs (connector index): 1-5 IO-1..IO-5, 6-8 DI-6..DI-8, 9-12 A-9..A-12, 0 none.");
-            Out("  A switch is active when the input reads high.");
+            Out("  Default polarity is NO (active high); use 13/14 for NC (active low) switches.");
             Ask(n == 11 ? FIELD_AXIS_POS_DI : FIELD_AXIS_NEG_DI, "%s limit input: ", n == 11 ? "+" : "-");
             break;
-        default: Out("  Pick 1-12 or b."); break;
+        case 13:
+            BeginPatch();
+            g_patch.hasPosLimNc[a] = true;
+            g_patch.posLimNc[a] = !g_cur.posLimNc[a];
+            Report(MotionConfigure(&g_patch), nullptr);
+            break;
+        case 14:
+            BeginPatch();
+            g_patch.hasNegLimNc[a] = true;
+            g_patch.negLimNc[a] = !g_cur.negLimNc[a];
+            Report(MotionConfigure(&g_patch), nullptr);
+            break;
+        default: Out("  Pick 1-14 or b."); break;
     }
 }
 

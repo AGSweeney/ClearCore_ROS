@@ -306,6 +306,19 @@ static void ApplyKey(const char *js, const jsmntok_t *toks, int ntok, int keyInd
         } else {
             req->cfg.hasClearMax[axis] = true;
         }
+    } else if (KeyAxis(js, key, "pos_lim_nc_", &axis) || KeyAxis(js, key, "neg_lim_nc_", &axis)) {
+        bool nc = false;
+        if (!ParseBool(js, val, &nc)) {
+            req->error = "limit nc must be a boolean";
+            return;
+        }
+        if (js[key->start] == 'p') {
+            req->cfg.hasPosLimNc[axis] = true;
+            req->cfg.posLimNc[axis] = nc;
+        } else {
+            req->cfg.hasNegLimNc[axis] = true;
+            req->cfg.negLimNc[axis] = nc;
+        }
     } else if (KeyAxis(js, key, "pos_lim_", &axis) || KeyAxis(js, key, "neg_lim_", &axis)) {
         double d = 0;
         if (!ParseDouble(js, val, &d) || d < 0.0 || d > 255.0) {

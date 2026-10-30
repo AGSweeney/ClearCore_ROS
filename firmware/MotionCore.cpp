@@ -49,6 +49,11 @@ static double g_limitMin[CCROS_AXIS_COUNT];
 static double g_limitMax[CCROS_AXIS_COUNT];
 static uint8_t g_posLimDi[CCROS_AXIS_COUNT];
 static uint8_t g_negLimDi[CCROS_AXIS_COUNT];
+/* Limit-switch polarity. Bit (a*2) is the + input for axis a, bit (a*2+1) the
+ * - input. 0 = normally-open / active-high (tripped when the input reads high),
+ * 1 = normally-closed / active-low (tripped when the input reads low, so a cut
+ * wire or lost connection trips the limit). */
+static uint8_t g_limitNcMask = 0;
 static char g_limitErr[40];
 static char g_travelLimit[48];
 static CoordinatedMotionController g_xy;
@@ -215,11 +220,13 @@ static void ApplyMechanics() {
 
 /* User-page blob. Magic differs from ClearAI ('CAIC') so that blob is not applied.
  * Version 1 is mechanics and network. Version 2 appends soft limits and DI pins.
- * Version 3 appends joint name, rotary flag, direction, gear, and offset. */
+ * Version 3 appends joint name, rotary flag, direction, gear, and offset.
+ * Version 4 appends per-input limit-switch polarity (limitNcMask). */
 static const uint32_t CCROS_NVM_MAGIC = 0x534F5243u; /* 'CROS' */
 static const uint16_t CCROS_NVM_VERSION_V1 = 1;
 static const uint16_t CCROS_NVM_VERSION_V2 = 2;
-static const uint16_t CCROS_NVM_VERSION = 3;
+static const uint16_t CCROS_NVM_VERSION_V3 = 3;
+static const uint16_t CCROS_NVM_VERSION = 4;
 
 #pragma pack(push, 1)
 struct CcrosNvmConfigV1 {
@@ -257,6 +264,7 @@ struct CcrosNvmConfig {
     int8_t direction[CCROS_AXIS_COUNT];
     float gear[CCROS_AXIS_COUNT];
     float offset[CCROS_AXIS_COUNT];
+    uint8_t limitNcMask; /* v4: limit-switch polarity, see g_limitNcMask */
 };
 #pragma pack(pop)
 
@@ -306,6 +314,7 @@ static void ApplyCompileDefaults() {
     memset(g_limitMax, 0, sizeof(g_limitMax));
     memset(g_posLimDi, 0, sizeof(g_posLimDi));
     memset(g_negLimDi, 0, sizeof(g_negLimDi));
+    g_limitNcMask = 0;
     g_travelLimit[0] = '\0';
 }
 
@@ -387,12 +396,17 @@ static bool ConfigBlobOk(const CcrosNvmConfig *cfg) {
     if (cfg->v2.v1.version == CCROS_NVM_VERSION_V2 && cfg->v2.v1.size == sizeof(CcrosNvmConfigV2)) {
         return ConfigPrefixOk(&cfg->v2.v1) && LimitsOk(&cfg->v2);
     }
-    if (cfg->v2.v1.version != CCROS_NVM_VERSION || cfg->v2.v1.size != sizeof(CcrosNvmConfig)) {
+    const bool isV3 = (cfg->v2.v1.version == CCROS_NVM_VERSION_V3 &&
+                       cfg->v2.v1.size == offsetof(CcrosNvmConfig, limitNcMask));
+    const bool isV4 = (cfg->v2.v1.version == CCROS_NVM_VERSION &&
+                       cfg->v2.v1.size == sizeof(CcrosNvmConfig));
+    if (!isV3 && !isV4) {
         return false;
     }
     if (!ConfigPrefixOk(&cfg->v2.v1) || !LimitsOk(&cfg->v2)) {
         return false;
     }
+    /* limitNcMask: every bit pattern is a valid polarity selection. */
     if (cfg->rotaryMask > 0x0f) {
         return false;
     }
@@ -451,6 +465,7 @@ static void ConfigApply(const CcrosNvmConfig *cfg) {
     memset(g_limitMax, 0, sizeof(g_limitMax));
     memset(g_posLimDi, 0, sizeof(g_posLimDi));
     memset(g_negLimDi, 0, sizeof(g_negLimDi));
+    g_limitNcMask = 0;
     if (cfg->v2.v1.version < CCROS_NVM_VERSION_V2) {
         return;
     }
@@ -461,7 +476,7 @@ static void ConfigApply(const CcrosNvmConfig *cfg) {
         g_posLimDi[a] = LimitDiNorm(cfg->v2.posLimDi[a]);
         g_negLimDi[a] = LimitDiNorm(cfg->v2.negLimDi[a]);
     }
-    if (cfg->v2.v1.version < CCROS_NVM_VERSION) {
+    if (cfg->v2.v1.version < CCROS_NVM_VERSION_V3) {
         return;
     }
     g_rotaryMask = cfg->rotaryMask;
@@ -472,6 +487,10 @@ static void ConfigApply(const CcrosNvmConfig *cfg) {
         g_gear[a] = cfg->gear[a];
         g_offset[a] = cfg->offset[a];
     }
+    if (cfg->v2.v1.version < CCROS_NVM_VERSION) {
+        return;
+    }
+    g_limitNcMask = cfg->limitNcMask;
 }
 
 static void ConfigFill(CcrosNvmConfig *cfg) {
@@ -506,6 +525,7 @@ static void ConfigFill(CcrosNvmConfig *cfg) {
         cfg->offset[a] = (float)g_offset[a];
     }
     cfg->rotaryMask = g_rotaryMask;
+    cfg->limitNcMask = g_limitNcMask;
 }
 
 static bool ConfigWrite(const CcrosNvmConfig *cfg) {
@@ -685,13 +705,28 @@ static void ApplyHwLimitInputs() {
     ConnectorDI6.Mode(Connector::INPUT_DIGITAL);
 }
 
+static bool LimitNc(uint8_t axis, bool positive) {
+    const uint8_t bit = positive ? (uint8_t)(axis * 2u) : (uint8_t)(axis * 2u + 1u);
+    return (g_limitNcMask & (1u << bit)) != 0;
+}
+
+/* True when this axis's limit switch in the given direction reads tripped,
+ * honoring NO (active-high) vs NC (active-low) polarity. An unconfigured pin
+ * (0) is never tripped. */
+static bool LimitTripped(uint8_t axis, bool positive) {
+    const uint8_t di = positive ? g_posLimDi[axis] : g_negLimDi[axis];
+    Connector *input = LimitConnector(di);
+    if (!input) {
+        return false;
+    }
+    return (input->State() != 0) != LimitNc(axis, positive);
+}
+
 static bool HwLimitOn(uint8_t axis, bool positive) {
     if (g_testMode || !AxisOn(axis)) {
         return false;
     }
-    const uint8_t di = positive ? g_posLimDi[axis] : g_negLimDi[axis];
-    Connector *input = LimitConnector(di);
-    return input && input->State() != 0;
+    return LimitTripped(axis, positive);
 }
 
 static const char *SoftReject(uint8_t axis, double q) {
@@ -1277,6 +1312,8 @@ void MotionSnapshotConfig(MotionConfigPatch *out, uint8_t *limitFlags) {
         out->limitMax[a] = g_limitMax[a];
         out->posLim[a] = g_posLimDi[a];
         out->negLim[a] = g_negLimDi[a];
+        out->posLimNc[a] = LimitNc(a, true);
+        out->negLimNc[a] = LimitNc(a, false);
         strncpy(out->name[a], g_jointName[a], sizeof(out->name[a]) - 1u);
         out->rotary[a] = AxisIsRotary(a);
         out->direction[a] = g_direction[a];
@@ -1292,7 +1329,8 @@ static const char *ApplyLimitPatch(const MotionConfigPatch *patch) {
     bool any = patch->hasClearLimits && patch->clearLimits;
     for (uint8_t a = 0; a < CCROS_AXIS_COUNT; a++) {
         any = any || patch->hasLimitMin[a] || patch->hasLimitMax[a] || patch->hasClearMin[a] ||
-              patch->hasClearMax[a] || patch->hasPosLim[a] || patch->hasNegLim[a];
+              patch->hasClearMax[a] || patch->hasPosLim[a] || patch->hasNegLim[a] ||
+              patch->hasPosLimNc[a] || patch->hasNegLimNc[a];
     }
     if (!any) {
         return nullptr;
@@ -1304,12 +1342,14 @@ static const char *ApplyLimitPatch(const MotionConfigPatch *patch) {
     uint8_t neg[CCROS_AXIS_COUNT];
     memcpy(mn, g_limitMin, sizeof(mn));
     memcpy(mx, g_limitMax, sizeof(mx));
+    uint8_t ncMask = g_limitNcMask;
     memcpy(pos, g_posLimDi, sizeof(pos));
     memcpy(neg, g_negLimDi, sizeof(neg));
     if (patch->hasClearLimits && patch->clearLimits) {
         flags = 0;
         memset(pos, 0, sizeof(pos));
         memset(neg, 0, sizeof(neg));
+        ncMask = 0;
     }
     for (uint8_t a = 0; a < CCROS_AXIS_COUNT; a++) {
         if (patch->hasClearMin[a]) {
@@ -1344,6 +1384,16 @@ static const char *ApplyLimitPatch(const MotionConfigPatch *patch) {
             }
             neg[a] = LimitDiNorm(patch->negLim[a]);
         }
+        if (patch->hasPosLimNc[a]) {
+            const uint8_t bit = (uint8_t)(a * 2u);
+            ncMask = patch->posLimNc[a] ? (uint8_t)(ncMask | (1u << bit))
+                                        : (uint8_t)(ncMask & ~(1u << bit));
+        }
+        if (patch->hasNegLimNc[a]) {
+            const uint8_t bit = (uint8_t)(a * 2u + 1u);
+            ncMask = patch->negLimNc[a] ? (uint8_t)(ncMask | (1u << bit))
+                                        : (uint8_t)(ncMask & ~(1u << bit));
+        }
         const bool minEn = (flags & (1u << (a * 2u))) != 0;
         const bool maxEn = (flags & (1u << (a * 2u + 1u))) != 0;
         if (minEn && maxEn && mn[a] > mx[a] + 1.0e-9) {
@@ -1356,6 +1406,7 @@ static const char *ApplyLimitPatch(const MotionConfigPatch *patch) {
     memcpy(g_limitMax, mx, sizeof(mx));
     memcpy(g_posLimDi, pos, sizeof(pos));
     memcpy(g_negLimDi, neg, sizeof(neg));
+    g_limitNcMask = ncMask;
     ApplyHwLimitInputs();
     return nullptr;
 }
@@ -2023,7 +2074,7 @@ static int SeekUntil(uint8_t axis, bool positive, bool useLimit, uint8_t pin, bo
         }
         bool tripped = false;
         if (useLimit) {
-            tripped = SwitchIsHigh(positive ? g_posLimDi[axis] : g_negLimDi[axis]);
+            tripped = LimitTripped(axis, positive);
         } else {
             const bool high = SwitchIsHigh(pin);
             tripped = activeHigh ? high : !high;
@@ -2153,7 +2204,7 @@ const char *MotionHome(const char *axisName, const char *dir, bool hasSeek, doub
     if (lim == 0) {
         return "limit not configured for this axis/dir";
     }
-    if (SwitchIsHigh(lim)) {
+    if (LimitTripped(axis, positive)) {
         return "limit already active; back off first";
     }
     const bool zero = hasZero ? zeroOn : true;
@@ -2390,6 +2441,8 @@ void MotionFillConfigJson(char *buf, uint16_t len) {
              "\"limits_max\":[%.6f,%.6f,%.6f,%.6f],"
              "\"pos_lim_di\":[%u,%u,%u,%u],"
              "\"neg_lim_di\":[%u,%u,%u,%u],"
+             "\"pos_lim_nc\":[%u,%u,%u,%u],"
+             "\"neg_lim_nc\":[%u,%u,%u,%u],"
              "\"names\":[\"%s\",\"%s\",\"%s\",\"%s\"],"
              "\"rotary\":[%u,%u,%u,%u],"
              "\"direction\":[%d,%d,%d,%d],"
@@ -2417,6 +2470,10 @@ void MotionFillConfigJson(char *buf, uint16_t len) {
              (unsigned)g_posLimDi[3],
              (unsigned)g_negLimDi[0], (unsigned)g_negLimDi[1], (unsigned)g_negLimDi[2],
              (unsigned)g_negLimDi[3],
+             (unsigned)((g_limitNcMask >> 0) & 1u), (unsigned)((g_limitNcMask >> 2) & 1u),
+             (unsigned)((g_limitNcMask >> 4) & 1u), (unsigned)((g_limitNcMask >> 6) & 1u),
+             (unsigned)((g_limitNcMask >> 1) & 1u), (unsigned)((g_limitNcMask >> 3) & 1u),
+             (unsigned)((g_limitNcMask >> 5) & 1u), (unsigned)((g_limitNcMask >> 7) & 1u),
              g_jointName[0], g_jointName[1], g_jointName[2], g_jointName[3],
              (unsigned)AxisIsRotary(0), (unsigned)AxisIsRotary(1),
              (unsigned)AxisIsRotary(2), (unsigned)AxisIsRotary(3),
