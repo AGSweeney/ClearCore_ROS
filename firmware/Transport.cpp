@@ -33,6 +33,9 @@ static uint32_t g_streamCloses = 0;
 
 static char g_usbLine[CCROS_MAX_LINE];
 static uint16_t g_usbIndex = 0;
+static bool g_usbPrevCr = false;
+/* Echo and line editing for a person at a terminal. Off for host tools. */
+static bool g_usbInteractive = false;
 static char g_tcpLine[CCROS_MAX_LINE];
 static uint16_t g_tcpIndex = 0;
 
@@ -63,9 +66,28 @@ static bool ReadFromPort(bool usb, char *outLine, uint16_t maxLen) {
         if (ch < 0) {
             return false;
         }
-        if (ch == '\n' || ch == '\r') {
-            if (*idx == 0) {
+        if (usb) {
+            /* CRLF is one line end, so a bare Enter from a terminal is one blank line. */
+            const bool afterCr = g_usbPrevCr;
+            g_usbPrevCr = (ch == '\r');
+            if (ch == '\n' && afterCr) {
                 continue;
+            }
+            if (g_usbInteractive && (ch == 0x08 || ch == 0x7f)) {
+                if (*idx > 0) {
+                    (*idx)--;
+                    SerialPort.Send("\b \b");
+                }
+                continue;
+            }
+        }
+        if (ch == '\n' || ch == '\r') {
+            /* USB returns blank lines so the setup menu can treat Enter as "keep". */
+            if (*idx == 0 && !usb) {
+                continue;
+            }
+            if (usb && g_usbInteractive) {
+                SerialPort.SendLine();
             }
             buf[*idx] = '\0';
             *idx = 0;
@@ -73,8 +95,14 @@ static bool ReadFromPort(bool usb, char *outLine, uint16_t maxLen) {
             outLine[maxLen - 1] = '\0';
             return true;
         }
+        if (usb && g_usbInteractive && ch < 0x20) {
+            continue;
+        }
         if (*idx < CCROS_MAX_LINE - 1) {
             buf[(*idx)++] = (char)ch;
+            if (usb && g_usbInteractive) {
+                SerialPort.SendChar((uint8_t)ch);
+            }
         } else {
             *idx = 0;
         }
@@ -266,11 +294,33 @@ void TransportSendLine(const char *line) {
     }
 }
 
-bool TransportReadLine(char *outLine, uint16_t maxLen) {
+void TransportUsbSend(const char *text) {
+    SerialPort.Send(text);
+}
+
+void TransportUsbSendLine(const char *line) {
+    SerialPort.SendLine(line);
+}
+
+void TransportSetUsbInteractive(bool on) {
+    g_usbInteractive = on;
+}
+
+const char *TransportIpString() {
+    return g_ethernetReady ? EthernetMgr.LocalIp().StringValue() : "not up (no link)";
+}
+
+bool TransportReadLine(char *outLine, uint16_t maxLen, bool *fromUsb) {
     if (ReadFromPort(true, outLine, maxLen)) {
+        if (fromUsb) {
+            *fromUsb = true;
+        }
         return true;
     }
     if (ReadFromPort(false, outLine, maxLen)) {
+        if (fromUsb) {
+            *fromUsb = false;
+        }
         return true;
     }
     return false;

@@ -56,6 +56,9 @@ bool MotionInit();
 void MotionPoll();
 
 bool MotionIsEnabled();
+bool MotionTestMode();
+/* Current settings in patch form with every has* flag clear. limitFlags uses the limit_flags bit order. */
+void MotionSnapshotConfig(MotionConfigPatch *out, uint8_t *limitFlags);
 const char *MotionConfigure(const MotionConfigPatch *patch);
 const char *MotionResetConfig();
 const char *MotionConfigureNetwork(const char *mode, bool hasMode, const char *ipAddress,

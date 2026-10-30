@@ -266,6 +266,9 @@
     <Compile Include="MotionCore.cpp">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="SerialMenu.cpp">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="Session.cpp">
       <SubType>compile</SubType>
     </Compile>

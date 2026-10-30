@@ -1046,6 +1046,8 @@ static void ServicePosition(uint8_t axis, uint32_t now) {
                 NoteTravelLimit(blocked);
                 return;
             }
+            /* A move_linear feed may have lowered VelMax. Goals run at vel_steps. */
+            m->VelMax(g_vel);
             if (m->Move(g_goalSteps[axis], StepGenerator::MOVE_TARGET_ABSOLUTE)) {
                 g_absIssued[axis] = true;
                 g_velLatched[axis] = false;
@@ -1246,6 +1248,36 @@ void MotionPoll() {
 
 bool MotionIsEnabled() {
     return g_enabled;
+}
+
+bool MotionTestMode() {
+    return g_testMode;
+}
+
+void MotionSnapshotConfig(MotionConfigPatch *out, uint8_t *limitFlags) {
+    memset(out, 0, sizeof(*out));
+    out->axisMask = g_axisMask;
+    out->vel = g_vel;
+    out->accel = g_accel;
+    out->decel = g_decel;
+    out->watchdogMs = g_watchdogMs;
+    out->estopDi6 = g_estopDi6;
+    for (uint8_t a = 0; a < CCROS_AXIS_COUNT; a++) {
+        out->stepsPerRev[a] = g_stepsPerRev[a];
+        out->pitchMm[a] = g_pitchMm[a];
+        out->limitMin[a] = g_limitMin[a];
+        out->limitMax[a] = g_limitMax[a];
+        out->posLim[a] = g_posLimDi[a];
+        out->negLim[a] = g_negLimDi[a];
+        strncpy(out->name[a], g_jointName[a], sizeof(out->name[a]) - 1u);
+        out->rotary[a] = AxisIsRotary(a);
+        out->direction[a] = g_direction[a];
+        out->gear[a] = g_gear[a];
+        out->offset[a] = g_offset[a];
+    }
+    if (limitFlags) {
+        *limitFlags = g_limitFlags;
+    }
 }
 
 static const char *ApplyLimitPatch(const MotionConfigPatch *patch) {
@@ -1701,6 +1733,8 @@ static bool XyCoordinated() {
 }
 
 static void ApplyFeed(uint8_t mask, bool hasFeed, double feedMps) {
+    /* A feed applies to its own move only. Start from vel_steps so an earlier feed does not carry over. */
+    ApplyDynamics();
     if (g_xyReady) {
         g_xy.ArcAccelMax(g_accel);
     }

@@ -4,7 +4,7 @@
  *
  * ClearCore firmware that exposes ClearPath M0..M3 as ROS 2 joints.
  * The board does not run DDS. A host bridge or ros2_control plugin speaks:
- *   USB CDC 115200     JSON-RPC Lines (same methods as TCP)
+ *   USB CDC 115200     JSON-RPC Lines (same methods as TCP), or "menu" for setup
  *   TCP 9200           JSON-RPC session (one client)
  *   TCP 9201           little-endian joint state / command stream
  *   UDP 9202           "CLEARCORE_ROS_DISCOVER?"
@@ -16,6 +16,7 @@
 #include "ClearCore.h"
 #include "MotionCore.h"
 #include "RosConfig.h"
+#include "SerialMenu.h"
 #include "Session.h"
 #include "Transport.h"
 
@@ -31,13 +32,17 @@ int main(void) {
             "\"firmware\":\"ClearCoreROS\",\"hint\":\"call get_capabilities\"}}");
     }
     TransportInitEthernet();
+    TransportUsbSendLine("Type 'menu' and press Enter for setup.");
 
     char line[CCROS_MAX_LINE];
     while (true) {
         TransportPoll();
         MotionPoll();
-        if (TransportReadLine(line, sizeof(line))) {
-            SessionDispatch(line);
+        bool fromUsb = false;
+        if (TransportReadLine(line, sizeof(line), &fromUsb)) {
+            if (!(fromUsb && SerialMenuHandleLine(line))) {
+                SessionDispatch(line);
+            }
         }
         Delay_ms(1);
     }

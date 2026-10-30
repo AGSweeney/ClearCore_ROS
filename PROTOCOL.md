@@ -23,7 +23,7 @@ Do not collide with ClearAI (9100–9102) or ClearCNC (8888, 8889, 10040).
 
 | Port | Protocol | Role |
 |------|----------|------|
-| USB CDC 115200 | JSONL | Same session methods as TCP |
+| USB CDC 115200 | JSONL, or text menu | Same session methods as TCP. A line `menu` opens the setup menu; a line starting with `{` closes it. |
 | **9200** | TCP JSONL | Session, one client |
 | **9201** | TCP binary | Joint state out, position/velocity/heartbeat in |
 | **9202** | UDP | Discovery |
