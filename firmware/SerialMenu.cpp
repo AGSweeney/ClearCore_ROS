@@ -146,14 +146,15 @@ static bool IpZero(const uint8_t ip[4]) {
     return ip[0] == 0 && ip[1] == 0 && ip[2] == 0 && ip[3] == 0;
 }
 
-/* Limit input codes 1..12 are connectors IO-0..IO-5, DI-6..DI-8, A-9..A-12. */
+/* Limit input codes are the ClearCore connector index: 1-5 IO-1..IO-5,
+ * 6-8 DI-6..DI-8, 9-12 A-9..A-12. IO-0 (index 0) is not assignable. */
 static const char *PinName(uint8_t di, char *buf, size_t len) {
     if (di == 0 || di == 255 || di > 12) {
         return "none";
     }
-    const unsigned connector = (unsigned)di - 1u;
-    const char *prefix = di <= 6 ? "IO-" : (di <= 9 ? "DI-" : "A-");
-    snprintf(buf, len, "%u (%s%u)", (unsigned)di, prefix, connector);
+    /* Code is the ClearCore connector index: 1-5 IO, 6-8 DI, 9-12 A. */
+    const char *prefix = di <= 5 ? "IO-" : (di <= 8 ? "DI-" : "A-");
+    snprintf(buf, len, "%u (%s%u)", (unsigned)di, prefix, (unsigned)di);
     return buf;
 }
 
@@ -406,7 +407,7 @@ static void ChooseAxis(uint32_t n) {
         case 10: Ask(FIELD_AXIS_MAX, "Soft max in %s, or 'off': ", Unit(a)); break;
         case 11:
         case 12:
-            Out("  Inputs: 1-6 = IO-0..IO-5, 7-9 = DI-6..DI-8, 10-12 = A-9..A-12, 0 = none.");
+            Out("  Inputs (connector index): 1-5 IO-1..IO-5, 6-8 DI-6..DI-8, 9-12 A-9..A-12, 0 none.");
             Out("  A switch is active when the input reads high.");
             Ask(n == 11 ? FIELD_AXIS_POS_DI : FIELD_AXIS_NEG_DI, "%s limit input: ", n == 11 ? "+" : "-");
             break;
