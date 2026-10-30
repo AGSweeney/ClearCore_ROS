@@ -17,6 +17,7 @@ SCRIPTS = (
     "test_session_bringup.py",
     "test_hardware_sim.py",
     "test_xrce_payloads.py",
+    "test_urdf_config.py",
 )
 
 

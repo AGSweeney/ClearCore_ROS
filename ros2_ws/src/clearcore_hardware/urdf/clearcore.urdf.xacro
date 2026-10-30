@@ -1,6 +1,9 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="clearcore">
-  <!-- URDF limits are informational. This scaffold does not enforce soft travel limits. -->
+  <!-- URDF limits are informational: the firmware enforces soft travel limits
+       only when its own min_/max_ limits are configured. Run
+       host/check_urdf_config.py <board-ip> to report any drift between this
+       file and the board's saved get_config (names, scaling, limits). -->
   <xacro:arg name="host" default="192.168.0.109"/>
   <xacro:arg name="axis_mask" default="3"/>
   <xacro:arg name="test_mode" default="false"/>

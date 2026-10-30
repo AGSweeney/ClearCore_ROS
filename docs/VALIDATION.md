@@ -57,6 +57,7 @@ Earlier firmware rows keep the image that was on the bench.
 | Recovery on hardware | Trip watchdog, reactivate | plugin | post-0.1.3 (`08d969c`) | 0.1.0 | `not-tested` | Hard to stage cleanly: the active plugin streams at 50 Hz, so the firmware watchdog only trips if the plugin stops (kill/pause). The equivalent recovery is covered on hardware by the plugin connection-loss row (killed node → watchdog latched → reconnect recovered) and in sim by gtest `ActivateWatchdogEofAndReconnect`. |
 | Two-axis JTC goal (0.03, 0.03) m then origin | `error_code` 0, peak \|Y−X\| 0.013 mm, end −0.09 mm | `trajectory.launch.py`, `send_trajectory_goal.py` | 0.1.1 | 0.1.0 | `hardware-bench` | releases/README 0.1.1; motors left disabled |
 | colcon build on Jazzy | `clearcore_hardware` and `clearcore_bridge` compile | GitHub Actions | n/a | 0.1.0 | `automated-sim` | `.github/workflows/clearcore-ros-jazzy.yml` |
+| URDF ↔ board config reconciliation | Report every mismatch between `clearcore.urdf.xacro` and the board `get_config` | `host/check_urdf_config.py`, `host/test_urdf_config.py` | 0.1.5 | 0.1.0 | `hardware-bench` | compare-logic covered in `test_urdf_config.py` (host CI); run against board `10.168.41.5` 2026-10-30 — matched names/scaling/watchdog, flagged `vel_steps`/`accel_steps` drift and the URDF `±1.0` limits as firmware-unenforced (soft limits off). |
 
 ## Session / firmware (not a ROS action)
 
