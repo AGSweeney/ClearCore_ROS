@@ -2,6 +2,30 @@
 
 Prebuilt firmware for the first-motor guide. You do not need Microchip Studio to flash the current file.
 
+## 0.1.4
+
+| | |
+|--|--|
+| File | `ClearCoreROS-0.1.4.bin` |
+| SHA-256 | `0aebeafc709d3411c8ec673d8e66435cb0069c00fb73a24740d67e4796786ada` |
+| Length | 297820 |
+| Protocol | `1.0` (`CCROS_PROTOCOL_VERSION`) |
+| Firmware sources | `d1abc8e` |
+| Host package | `clearcore_bridge` `0.1.0` |
+
+This image keeps the 0.1.3 wire protocol, joint map, and NVM version 3. It was flashed from this exact file and verified on the bench (board `10.168.41.5`: `axis_mask` 3, `test_mode` false, motors disabled, NVM preserved).
+
+Changes since 0.1.3:
+
+- **A hardware limit now halts an in-flight move.** A limit switch pressed during a `set_joints` (absolute) move decelerates the axis immediately. Earlier, `PollTravel` keyed the hardware-limit stop off the motor's latched `MoveDirection` status bit, so a limit hit mid-move was missed (homing and move-into-active-limit were unaffected); it now uses the commanded direction, matching the soft-limit branch. (`35d8df9`)
+- **Limit-input numbering corrected.** A limit code `N` maps to ClearCore connector index `N`, so the bench switch on DI-8 is code `8`. Fixed in `PROTOCOL.md`, the USB menu help, and `PinName()`. (`47469c8`)
+- **USB setup menu.** Type `menu` on the USB CDC port for a text menu (network / axes / motion / safety) that drives the same configure paths as the session API; a line starting with `{` leaves the menu. (`08d969c`)
+- **Feed rate no longer sticks.** `move_linear` / `move_arc` with `feed_mps` previously lowered `VelMax` permanently; feed now applies per move and the prior velocity is restored. (`08d969c`)
+
+The adoption validation matrix is [../docs/VALIDATION.md](../docs/VALIDATION.md); hardware rows added this cycle cover homing, the mid-move limit halt, cancel-during-move, and connection-loss / watchdog recovery.
+
+Flash instructions are in [../docs/FIRST_MOTOR.md](../docs/FIRST_MOTOR.md).
+
 ## 0.1.3
 
 | | |

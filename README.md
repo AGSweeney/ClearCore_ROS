@@ -65,7 +65,7 @@ Zero is the pose at boot, or the pose after `home` with `zero` true. `0.01` m is
 
 ## Firmware
 
-The first-motor image is [releases/ClearCoreROS-0.1.3.bin](releases/ClearCoreROS-0.1.3.bin). Flash instructions and the tested-revision list are in [releases/README.md](releases/README.md) and [docs/FIRST_MOTOR.md](docs/FIRST_MOTOR.md). `0.1.2` withholds XRCE until TIMESTAMP_REPLY but still puts HLFB in `JointState.effort`. `0.1.1` is the joint-map image. `0.1.0` has no joint map.
+The first-motor image is [releases/ClearCoreROS-0.1.4.bin](releases/ClearCoreROS-0.1.4.bin). Flash instructions and the tested-revision list are in [releases/README.md](releases/README.md) and [docs/FIRST_MOTOR.md](docs/FIRST_MOTOR.md). `0.1.4` makes a hardware limit halt an in-flight move, corrects limit-input numbering, adds the USB setup menu, and stops `feed_mps` from slowing later moves. `0.1.3` is the prior image before those fixes. `0.1.2` withholds XRCE until TIMESTAMP_REPLY but still puts HLFB in `JointState.effort`. `0.1.1` is the joint-map image. `0.1.0` has no joint map.
 
 To build instead of using that file, open `firmware/ClearCoreROS.atsln` in Microchip Studio 7 and flash with `external/EnhancedClearCoreLibrary/Tools/flash_clearcore.cmd`. Command-line build from the Debug directory, same toolchain as ClearAI:
 
