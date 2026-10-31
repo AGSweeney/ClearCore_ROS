@@ -1,3 +1,4 @@
+# MIT License. Copyright (c) 2026 Adam G. Sweeney <agsweeney@gmail.com>
 """Reconcile the ros2_control URDF against the board's saved configuration.
 
 The URDF (clearcore.urdf.xacro) carries the joint names, the ros2_control

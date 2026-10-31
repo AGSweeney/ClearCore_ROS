@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# MIT License. Copyright (c) 2026 Adam G. Sweeney <agsweeney@gmail.com>
 # Wait for the bring-up battery to finish, then start stay-enabled random ROS moves.
 set -eo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

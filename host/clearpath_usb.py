@@ -1,3 +1,4 @@
+# MIT License. Copyright (c) 2026 Adam G. Sweeney <agsweeney@gmail.com>
 """Monitor a ClearPath MC/SD on its own USB port (the MSP port).
 
 Talks the Teknic node protocol that ClearPath-MSP uses. Close MSP first: the

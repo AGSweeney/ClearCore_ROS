@@ -1,3 +1,4 @@
+# MIT License. Copyright (c) 2026 Adam G. Sweeney <agsweeney@gmail.com>
 """Unit tests for the URDF/board reconciliation checker (no hardware)."""
 
 from __future__ import annotations

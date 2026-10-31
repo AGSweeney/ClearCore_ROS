@@ -250,3 +250,7 @@ python host\test_xrce_payloads.py
 - A host that disappears mid-move trips the watchdog (default 500 ms). A dropped stream socket stops immediately. Clearing that latch is `clear_alerts`, not a keepalive.
 - `travel_limit` holds the last soft-limit or switch stop until `clear_alerts`.
 - Do not connect the CLI and a ROS node at the same time. Each of ports 9200 and 9201 accepts one client.
+
+## License
+
+MIT License, Copyright (c) 2026 Adam G. Sweeney. See [LICENSE](LICENSE). The ClearCore library submodule and the bundled jsmn tokenizer keep their own licences; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
