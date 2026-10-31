@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# MIT License. Copyright (c) 2026 Adam G. Sweeney <agsweeney@gmail.com>
 # 30-minute stay-enabled ROS random-move endurance (JTC). No mid-run disable/disconnect.
 set -eo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

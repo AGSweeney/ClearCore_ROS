@@ -1,3 +1,4 @@
+# MIT License. Copyright (c) 2026 Adam G. Sweeney <agsweeney@gmail.com>
 """Two-axis bench run on M0 (X) and M1 (Y). Moves real motors.
 
 Bare motors on a bench only. Travel is up to 0.12 m of joint motion (about 24
